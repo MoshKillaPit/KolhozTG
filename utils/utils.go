@@ -8,11 +8,8 @@ import (
 )
 
 // SendMessageWithDeletion отправляет сообщение, ждет указанное время, а затем удаляет его
-func SendMessageWithDeletion(bot *tgbotapi.BotAPI, chatID int64, text string, delay time.Duration, replyMarkup interface{}) {
+func SendMessageWithDeletion(bot *tgbotapi.BotAPI, chatID int64, text string, delay time.Duration) {
 	msg := tgbotapi.NewMessage(chatID, text)
-	if replyMarkup != nil {
-		msg.ReplyMarkup = replyMarkup
-	}
 	sentMessage, err := bot.Send(msg)
 	if err != nil {
 		log.Println("Ошибка отправки сообщения:", err)
@@ -36,6 +33,7 @@ func DeleteMessage(bot *tgbotapi.BotAPI, chatID int64, messageID int) {
 
 	_, err := bot.Request(delMsg)
 	if err != nil {
+		// Логируем все ошибки
 		log.Println("Ошибка удаления сообщения:", err)
 	} else {
 		log.Println("Сообщение успешно удалено")

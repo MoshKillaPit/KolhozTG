@@ -16,7 +16,7 @@ func HandleStartCommand(update tgbotapi.Update, bot *tgbotapi.BotAPI, dbConn *sq
 	userName := update.Message.From.FirstName
 
 	// Удаляем сообщение пользователя спустя некоторое время
-	utils.DeleteMessageAfter(bot, userID, update.Message.MessageID, 10*time.Second)
+	utils.DeleteMessageAfter(bot, userID, update.Message.MessageID, 15*time.Second)
 
 	// Проверяем, есть ли пользователь в базе данных
 	_, err := db.GetStateFromDB(dbConn, userID)
@@ -26,13 +26,13 @@ func HandleStartCommand(update tgbotapi.Update, bot *tgbotapi.BotAPI, dbConn *sq
 			err := db.CreateUserInDB(dbConn, userID, userName, "waiting_for_answer")
 			if err != nil {
 				reply := "Произошла ошибка при создании нового пользователя, попробуйте позже."
-				utils.SendMessageWithDeletion(bot, userID, reply, 5*time.Second)
+				utils.SendMessageWithDeletion(bot, userID, reply, 15*time.Second)
 				return
 			}
 		} else {
 			log.Printf("Ошибка при получении состояния: %v", err)
 			reply := "Произошла ошибка, попробуйте позже."
-			utils.SendMessageWithDeletion(bot, userID, reply, 5*time.Second)
+			utils.SendMessageWithDeletion(bot, userID, reply, 15*time.Second)
 			return
 		}
 	} else {
@@ -40,7 +40,7 @@ func HandleStartCommand(update tgbotapi.Update, bot *tgbotapi.BotAPI, dbConn *sq
 		err = db.SetStateInDB(dbConn, userID, "waiting_for_answer")
 		if err != nil {
 			reply := "Произошла ошибка при обновлении состояния, попробуйте позже."
-			utils.SendMessageWithDeletion(bot, userID, reply, 5*time.Second)
+			utils.SendMessageWithDeletion(bot, userID, reply, 15*time.Second)
 			return
 		}
 	}
@@ -66,5 +66,5 @@ func HandleStartCommand(update tgbotapi.Update, bot *tgbotapi.BotAPI, dbConn *sq
 	}
 
 	// Удаляем сообщение бота спустя некоторое время
-	utils.DeleteMessageAfter(bot, userID, sentMessage.MessageID, 5*time.Second)
+	utils.DeleteMessageAfter(bot, userID, sentMessage.MessageID, 15*time.Second)
 }

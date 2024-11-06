@@ -2,64 +2,73 @@ package handlers
 
 import (
 	"FarmTG/db"
+	"FarmTG/storyflow"
 	"FarmTG/utils"
 	"database/sql"
+	"fmt"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 	"time"
 )
 
 // Обработка пользовательского ответа
 func HandleUserResponse(update tgbotapi.Update, bot *tgbotapi.BotAPI, dbConn *sql.DB) {
-	if update.Message == nil {
-		return
-	}
 	userID := update.Message.Chat.ID
 
 	// Удаляем сообщение пользователя спустя некоторое время
-	if !update.Message.Chat.IsPrivate() {
-		utils.DeleteMessageAfter(bot, userID, update.Message.MessageID, 15*time.Second)
-	}
+	utils.DeleteMessageAfter(bot, userID, update.Message.MessageID, 5*time.Second)
 
 	// Получаем текущее состояние пользователя
 	currentState, err := db.GetStateFromDB(dbConn, userID)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			reply := "Пожалуйста, начните с команды /start."
-			utils.SendMessageWithDeletion(bot, userID, reply, 10*time.Second, nil)
+			utils.SendMessageWithDeletion(bot, userID, reply, 10*time.Second)
 			return
 		} else {
 			reply := "Произошла ошибка при получении состояния, попробуйте позже."
-			utils.SendMessageWithDeletion(bot, userID, reply, 15*time.Second, nil)
+			utils.SendMessageWithDeletion(bot, userID, reply, 15*time.Second)
 			return
 		}
 	}
 
 	switch currentState {
-	// ... предыдущие case ...
-
-	case "waiting_for_adventure_answer":
+	case "waiting_for_answer":
 		userResponse := update.Message.Text
-		// Убираем клавиатуру после ответа пользователя
-		removeKeyboard := tgbotapi.NewRemoveKeyboard(true)
-
 		if userResponse == "Да" {
-			reply := "Отлично! Приключения ждут тебя!"
-			utils.SendMessageWithDeletion(bot, userID, reply, 30*time.Second, removeKeyboard)
-			// Обновляем состояние пользователя или продолжаем сценарий
-			// Например, можно запустить следующую часть истории
-			db.SetStateInDB(dbConn, userID, "adventure_started")
-			// Запуск следующей части истории
-			// storyflow.StartNextAdventure(bot, dbConn, userID)
+			// Обновляем состояние и просим ввести имя
+			err := db.SetStateInDB(dbConn, userID, "registrationName")
+			if err != nil {
+				reply := "Произошла ошибка, попробуйте позже."
+				utils.SendMessageWithDeletion(bot, userID, reply, 10*time.Second)
+				return
+			}
+			reply := "Отлично! Пожалуйста, введи своё имя:"
+			utils.SendMessageWithDeletion(bot, userID, reply, 20*time.Second)
 		} else if userResponse == "Нет" {
-			reply := "Очень жаль. Если передумаешь, напиши мне снова."
-			utils.SendMessageWithDeletion(bot, userID, reply, 30*time.Second, removeKeyboard)
-			// Сбрасываем состояние пользователя
+			reply := "Очень жаль. Если передумаешь, напиши /start."
+			utils.SendMessageWithDeletion(bot, userID, reply, 15*time.Second)
+			// Сбрасываем состояние
 			db.SetStateInDB(dbConn, userID, "")
 		} else {
 			reply := "Пожалуйста, выбери 'Да' или 'Нет'."
-			utils.SendMessageWithDeletion(bot, userID, reply, 15*time.Second, nil)
+			utils.SendMessageWithDeletion(bot, userID, reply, 10*time.Second)
 		}
 
-		// ... остальные case ...
+	case "registrationName":
+		userName := update.Message.Text
+		if err := db.SaveUserToDB(dbConn, userID, userName, "storyTelling1"); err != nil {
+			reply := "Произошла ошибка при сохранении данных, попробуйте позже."
+			utils.SendMessageWithDeletion(bot, userID, reply, 10*time.Second)
+		} else {
+			reply := fmt.Sprintf("Отлично, %s! Ты успешно зарегистрирован на ферме!", userName)
+			utils.SendMessageWithDeletion(bot, userID, reply, 20*time.Second)
+
+			// Запускаем сценарий истории после регистрации
+			storyflow.StartStorySequence(bot, dbConn, userID)
+		}
+
+	default:
+		reply := "Пожалуйста, начни с команды /start."
+		utils.SendMessageWithDeletion(bot, userID, reply, 10*time.Second)
 	}
 }

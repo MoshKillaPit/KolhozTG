@@ -14,16 +14,16 @@ func HandleResetCommand(update tgbotapi.Update, bot *tgbotapi.BotAPI, dbConn *sq
 	userID := update.Message.Chat.ID
 
 	// Удаляем сообщение пользователя спустя некоторое время
-	utils.DeleteMessageAfter(bot, userID, update.Message.MessageID, 5*time.Second)
+	utils.DeleteMessageAfter(bot, userID, update.Message.MessageID, 15*time.Second)
 
 	err := db.ResetUserData(dbConn, userID)
 	if err != nil {
 		reply := "Произошла ошибка при сбросе данных, попробуйте позже."
-		utils.SendMessageWithDeletion(bot, userID, reply, 5*time.Second)
+		utils.SendMessageWithDeletion(bot, userID, reply, 15*time.Second)
 		return
 	}
 
 	reply := "Ваши данные были успешно сброшены. Вы можете начать сначала, отправив команду /start."
-	utils.SendMessageWithDeletion(bot, userID, reply, 5*time.Second)
+	utils.SendMessageWithDeletion(bot, userID, reply, 15*time.Second)
 	log.Printf("Данные пользователя с ID %d были сброшены", userID)
 }
